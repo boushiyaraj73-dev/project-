@@ -16,7 +16,7 @@ const DEFAULT_LOCATIONS = [
 
 const $ = (id) => document.getElementById(id);
 // Shared online database (Firebase Realtime Database). Paste YOUR database URL here, no trailing slash.
-const DB_URL = ' https://boushiyaraj73-dev.github.io/project-/';
+ const DB_URL = 'https://qr-eco-campus-default-rtdb.firebaseio.com';
 let reports = [];
 let locations = loadJson(LOCATION_KEY, DEFAULT_LOCATIONS);
 // Add newly introduced default locations to older saved versions without removing user locations.
