@@ -16,7 +16,7 @@ const DEFAULT_LOCATIONS = [
 
 const $ = (id) => document.getElementById(id);
 // Shared online database (Firebase Realtime Database). Paste YOUR database URL here, no trailing slash.
- const DB_URL = 'https://qr-eco-campus-default-rtdb.firebaseio.com';
+const DB_URL ='https://qr-eco-campus-default-rtdb.asia-southeast1.firebasedatabase.app';
 let reports = [];
 let locations = loadJson(LOCATION_KEY, DEFAULT_LOCATIONS);
 // Add newly introduced default locations to older saved versions without removing user locations.
@@ -53,7 +53,7 @@ async function saveReport(report) {
     method: 'PUT',
     body: JSON.stringify(report)
   });
-  if (!res.ok) throw new Error('Save failed');
+  if (!res.ok) throw new Error('Database said ' + res.status + ': ' + (await res.text()).slice(0, 120));
 }
 
 function escapeHtml(value) {
@@ -314,7 +314,7 @@ async function handleIssueSubmit(event) {
     await saveReport(report);
     reports.push(report);
   } catch (error) {
-    showFormMessage('Could not save the report. Check your internet connection and try again.', true);
+    showFormMessage('Could not save the report. ' + (error && error.message ? error.message : error), true);
     return;
   }
 
