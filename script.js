@@ -15,7 +15,9 @@ const DEFAULT_LOCATIONS = [
 ];
 
 const $ = (id) => document.getElementById(id);
-let reports = loadJson(STORAGE_KEY, []);
+// Shared online database (Firebase Realtime Database). Paste YOUR database URL here, no trailing slash.
+const DB_URL = ' https://boushiyaraj73-dev.github.io/project-/';
+let reports = [];
 let locations = loadJson(LOCATION_KEY, DEFAULT_LOCATIONS);
 // Add newly introduced default locations to older saved versions without removing user locations.
 for (const defaultLocation of DEFAULT_LOCATIONS) {
@@ -35,8 +37,23 @@ function loadJson(key, fallback) {
   }
 }
 
-function saveReports() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reports));
+async function loadReports() {
+  try {
+    const res = await fetch(`${DB_URL}/reports.json`);
+    const data = await res.json();
+    reports = data ? Object.values(data) : [];
+  } catch (error) {
+    console.warn('Could not load reports:', error);
+    reports = [];
+  }
+}
+
+async function saveReport(report) {
+  const res = await fetch(`${DB_URL}/reports/${report.id}.json`, {
+    method: 'PUT',
+    body: JSON.stringify(report)
+  });
+  if (!res.ok) throw new Error('Save failed');
 }
 
 function escapeHtml(value) {
@@ -266,7 +283,7 @@ function showFormMessage(message, isError = false) {
   target.classList.toggle('error', isError);
 }
 
-function handleIssueSubmit(event) {
+async function handleIssueSubmit(event) {
   event.preventDefault();
 
   const locationId = $('locationSelect').value;
@@ -293,12 +310,11 @@ function handleIssueSubmit(event) {
     updatedAt: new Date().toISOString()
   };
 
-  reports.push(report);
   try {
-    saveReports();
+    await saveReport(report);
+    reports.push(report);
   } catch (error) {
-    reports = reports.filter((item) => item.id !== report.id);
-    showFormMessage('Could not save the report. Browser storage may be full or disabled.', true);
+    showFormMessage('Could not save the report. Check your internet connection and try again.', true);
     return;
   }
 
@@ -330,7 +346,7 @@ function openStatusDialog(reportId) {
   $('statusDialog').showModal();
 }
 
-function saveStatusUpdate(event) {
+async function saveStatusUpdate(event) {
   if (event) event.preventDefault();
   const report = reports.find((item) => item.id === editingReportId);
   if (!report) return;
@@ -340,9 +356,9 @@ function saveStatusUpdate(event) {
   report.updatedAt = new Date().toISOString();
 
   try {
-    saveReports();
+    await saveReport(report);
   } catch (error) {
-    alert('Could not save the update. Browser storage may be unavailable.');
+    alert('Could not save the update. Check your internet connection.');
     return;
   }
 
@@ -378,18 +394,18 @@ function exportCsv() {
   URL.revokeObjectURL(url);
 }
 
-function clearReports() {
+async function clearReports() {
   if (!reports.length) {
     alert('There are no demo reports to clear.');
     return;
   }
-  if (!confirm('Delete all reports saved in this browser? This cannot be undone.')) return;
+  if (!confirm('Delete ALL reports for everyone? This cannot be undone.')) return;
 
-  reports = [];
   try {
-    saveReports();
+    await fetch(`${DB_URL}/reports.json`, { method: 'DELETE' });
+    reports = [];
   } catch (error) {
-    alert('Could not clear saved reports. Browser storage may be unavailable.');
+    alert('Could not clear reports. Check your internet connection.');
     return;
   }
   renderAll();
@@ -429,7 +445,7 @@ function renderPublicReportTracking(reportId) {
       return;
     }
     if (!report) {
-      message.textContent = 'No matching report was found in this browser. If it was submitted from another phone/device, this local demo cannot access that device\'s saved data.';
+      message.textContent = 'No matching report was found. Please check the report ID.';
       message.classList.add('error');
       return;
     }
@@ -459,7 +475,8 @@ function renderPublicReportTracking(reportId) {
   }
 }
 
-function init() {
+async function init() {
+  await loadReports();
   populateLocationSelects();
   renderAll();
 
